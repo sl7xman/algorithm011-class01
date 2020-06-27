@@ -45,25 +45,132 @@
     
 有了这个公式，就有了解题思路，接下来就是动手写代码，把思路变成实际的程序。这个过程很重要。具体代码为 
 ```
+int trap(int* height, int heightSize){
+    int ans = 0;
+    int i = 0;
+
+    for ( i = 0; i < heightSize; ++i ) {
+        int max_left = 0;
+        int max_right = 0;
+        int j = 0;
+
+        for ( j = i; j >= 0; --j ) {
+            max_left = max_left > height[j] ? max_left : height[j];
+        }
+
+        for ( j = i; j < heightSize; ++j ) {
+            max_right = max_right > height[j] ? max_right : height[j];
+        }
+
+        int min_left_right = max_right > max_left ? max_left : max_right;
+
+        ans += min_left_right - height[i];
+    }
+    return ans;
+}
+
+
+```
+这种解法包含了两层的嵌套for循环，因此其时间复杂度是O(n^2),显然效率不高。
+
+当写完这段代码、提交通过后，再在脑子里想一遍这个解题过程，这个时候才真正完成了由理解题意到真正解决问题的转变。
+
+此时，再回过头继续看这段代码：是否存在不必要的重复计算？发现存在两处可以优化的地方：
+
+    1、当前元素左侧的最大值，不需要每次都计算，
+       只需把上一次计算的最大值，与当前元素的值，进行比较，就能确定最新的左侧最大值；
+       如果当前元素的值是新的左侧最大值，不需要再寻找右侧最大值。
+
+    2、当前元素右侧的最大值，不需要每次都计算，
+       记录上次找到最大右侧值的下标，
+       只要当前元素下标小于上述下标，就不需要再查找右侧最大值。
+
+根据这两个优化位置，对代码进行了如下优化：
+
+```
+int trap(int* height, int heightSize){
+    int ans = 0;
+    int i = 0;
+    int max_right_idx = 0;
+    int min_left_right = 0;
+    
+    int max_left = 0;
+    int max_right = 0;
+    for ( i = 0; i < heightSize; ++i ) {
+        int j = 0;
+        
+        int mheight = height[i];
+        if ( max_left < mheight ) { //当前元素值是左侧的最大值，更新左侧最大值，结束本次循环
+            max_left = mheight;
+            continue;
+        }
+
+        if ( i >= max_right_idx ) { //当前元素下标大于右侧最大值下标，查找右侧最大值，并更新最大右侧值下标
+            max_right = 0;
+            for ( j = i; j < heightSize; ++j ) {
+                int mheight = height[j];
+                if ( max_right < mheight ) {
+                    max_right = mheight;
+                    max_right_idx = j;
+                }
+            }
+        }
+        min_left_right = max_right > max_left ? max_left : max_right;
+        if( min_left_right >= height[i] ) {
+            ans += min_left_right - height[i];
+        }
+    }
+    return ans;
+}
+
+```
+
+这样的代码，性能提高了不少，但可读性变得很差了。如果不是必要，工程上不建议引入这样的复杂性。一难维护，二容易引入隐藏的bug。
+
+到这里，我也没有更好的思路了，就再次看题解，这次看了一个“单调递减栈”的解法，思路非常好，但第一遍直接没看懂。
+
+反复看了几遍+读代码+听覃老师视频，才真正明白，核心思想是：
+
+    当前元素比栈顶值小，直接入栈；
+    当前元素比栈顶值大，弹栈并计算水容量 = ( min(当前值，新栈顶元素值) - 弹栈值 ) * (当前值索引 - 新栈顶元素索引 - 1)
+
+具体代码为：
+```
 class Solution {
 public:
     int trap(vector<int>& height) {
         int ans = 0;
-        int size = height.size();
-        for ( auto i = 0; i < size -1; ++i ) {
-            int max_right = 0;
-            int max_left = 0;
-            for ( auto j = i; j >= 0; --j ){
-                max_left = max(max_left, height[j]);
-            }
-            for ( auto j = i ; j < size; ++j ) {
-                max_right = max(max_right, height[j]);
-            }
+        stack<int> s;
 
-            ans += min(max_left, max_right) - height[i];
+        for ( int i = 0; i < height.size(); ++i ){
+
+            int cur_h = height[i];
+            while( !s.empty() && ( height[ s.top() ] < cur_h ) ) {
+                int prev_idx = s.top();
+                s.pop();
+                if( s.empty() ) {
+                    break;
+                }
+                int l = s.top();
+                int h = min( cur_h, height[l] ) - height[prev_idx];
+                ans += ( i - l - 1 ) * h;
+            }
+            s.push(i);
         }
+
         return ans;
     }
 };
 ```
 
+接雨水还有其他解法，但目前没有时间看了。
+
+这些过程并不是一天就完成的，反反复复的用了三天。
+
+暴力法有时虽然很笨，但写出来能提高对题目的理解，像覃老师说的“很多暴力算法落实到代码上并不容易”。
+
+而像栈这种解法，在对题目不是很理解，数据结构掌握不是很好时，很难直接想到。
+
+工作较忙，自己可以利用的精力充沛时间很少，回想这一周，死磕题解和写代码费的时间较多，还需要深入理解并落实“五毒神掌”的精要。
+
+加油，诸位。
