@@ -121,3 +121,41 @@ private:
         return m_count;
     }
 };
+class Solution {
+public:
+    vector<vector<char>> updateBoard(vector<vector<char>>& board, vector<int>& click) {
+        int nr = board.size();
+        int nc = board[0].size();
+        int r = click[0];
+        int c = click[1];
+        if( board[r][c] == 'M' || board[r][c] == 'X' ) {
+            board[r][c] = 'X';
+            return board;
+        }
+        vector<vector<int>> dirs ={ {0,-1}, {0,1},{1,0},{-1,0},{1,1},{1,-1},{-1,1}, {-1,-1} };
+        int m_count = 0;
+        for (auto dir: dirs){
+            int cr = r + dir[0];
+            int cc = c + dir[1];
+            if( cr >=0 && cr < nr && cc >= 0 && cc < nc && board[cr][cc] =='M' ){
+                ++m_count;
+            }
+        }
+        if(m_count){
+            board[r][c] =m_count+'0';
+            return board;
+        }
+
+        board[r][c] ='B';
+        for( auto dir: dirs ){
+            int cr = r+dir[0];
+            int cc = c+dir[1];
+            if( cr >=0 && cr < nr && cc >= 0 && cc < nc && board[cr][cc] =='E' ){
+                vector<int> next_click = {cr, cc};
+                updateBoard(board, next_click);
+            }
+        }
+        return board;
+    }
+};
+
